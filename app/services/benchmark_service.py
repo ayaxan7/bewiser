@@ -5,15 +5,130 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from app.config.settings import RISK_FREE_RATE, TRADING_DAYS
 
+try:
+    from nsepython import nse_get_index_quote
+    import yfinance as yf
+    NSE_AVAILABLE = True
+except ImportError:
+    NSE_AVAILABLE = False
+    print("Warning: nsepython or yfinance not available. Using fallback data.")
+
 
 def fetch_nifty50_data(days_back: int = 1825) -> pd.DataFrame:
     """
-    Fetch Nifty 50 historical data.
-    Using a mock API or Yahoo Finance alternative for demo purposes.
-    In production, you'd use actual market data APIs like Alpha Vantage, Yahoo Finance, etc.
+    Fetch Nifty 50 historical data from real sources.
+    First tries Yahoo Finance for historical data, then falls back to NSE current data with extrapolation.
+    Falls back to synthetic data if APIs are unavailable.
     """
-    # For demonstration, we'll create synthetic Nifty 50 data
-    # In production, replace this with actual API calls
+    if not NSE_AVAILABLE:
+        return _generate_synthetic_nifty_data(days_back)
+    
+    # Try Yahoo Finance first for historical data
+    try:
+        print(f"🔄 Fetching {days_back} days of Nifty 50 data from Yahoo Finance...")
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        # Fetch Nifty 50 data from Yahoo Finance
+        ticker = "^NSEI"  # Nifty 50 symbol on Yahoo Finance
+        
+        # Try different approach for yfinance
+        import yfinance as yf
+        nifty_ticker = yf.Ticker(ticker)
+        nifty_data = nifty_ticker.history(start=start_date, end=end_date, auto_adjust=True)
+        
+        if not nifty_data.empty and len(nifty_data) > 10:
+            # Use closing prices and reset index to get dates as a column
+            df = nifty_data.reset_index()
+            df = pd.DataFrame({
+                'date': pd.to_datetime(df['Date']),
+                'nav': df['Close'].values
+            })
+            df = df.dropna()
+            
+            if len(df) > 50:  # Ensure we have sufficient data (reduced threshold)
+                print(f"✅ Fetched {len(df)} days of real Nifty 50 data from Yahoo Finance")
+                print(f"   Date range: {df['date'].min().date()} to {df['date'].max().date()}")
+                print(f"   NAV range: {df['nav'].min():.0f} to {df['nav'].max():.0f}")
+                return df
+        
+        print("⚠️  Yahoo Finance data insufficient, trying NSE...")
+        
+    except Exception as e:
+        print(f"⚠️  Yahoo Finance error: {e}")
+        print("🔄 Trying NSE data with extrapolation...")
+    
+    # Try NSE data with extrapolation
+    try:
+        return _fetch_nse_data_with_extrapolation(days_back)
+        
+    except Exception as e:
+        print(f"⚠️  NSE data error: {e}")
+        print("🔄 Falling back to synthetic data...")
+        return _generate_synthetic_nifty_data(days_back)
+
+
+def _fetch_nse_data_with_extrapolation(days_back: int) -> pd.DataFrame:
+    """
+    Fetch current Nifty 50 data from NSE and create historical data based on realistic patterns.
+    This is a hybrid approach when full historical data is not available.
+    """
+    try:
+        print("🔄 Getting current Nifty 50 data from NSE...")
+        # Get current Nifty 50 data
+        current_data = nse_get_index_quote("NIFTY 50")
+        current_price = float(current_data.get('lastPrice', 22500))
+        
+        print(f"✅ Current Nifty 50 price from NSE: {current_price:.0f}")
+        
+        # Generate historical data based on current price and realistic market patterns
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+        dates = dates[dates.weekday < 5]  # Remove weekends
+        
+        # Use more realistic Nifty 50 parameters based on historical performance
+        np.random.seed(42)  # For reproducible results
+        
+        # Generate returns with realistic parameters for Nifty 50
+        daily_returns = np.random.normal(
+            loc=0.12/252,      # 12% annual return (historical average)
+            scale=0.18/np.sqrt(252),  # 18% annual volatility
+            size=len(dates)
+        )
+        
+        # Calculate initial price that would lead to current price
+        # Work backwards from current price
+        total_expected_return = np.sum(daily_returns)
+        initial_price = current_price / (1 + total_expected_return)
+        
+        prices = [initial_price]
+        for ret in daily_returns[1:-1]:
+            prices.append(prices[-1] * (1 + ret))
+        
+        # Ensure the last price is the current NSE price
+        prices.append(current_price)
+        
+        df = pd.DataFrame({
+            'date': dates[:len(prices)],
+            'nav': prices
+        })
+        
+        print(f"✅ Generated {len(df)} days of Nifty 50 data based on current NSE price")
+        print(f"   Initial price: {initial_price:.0f}, Final price: {current_price:.0f}")
+        return df
+        
+    except Exception as e:
+        print(f"⚠️  NSE data error: {e}")
+        raise
+
+
+def _generate_synthetic_nifty_data(days_back: int) -> pd.DataFrame:
+    """
+    Generate synthetic Nifty 50 data as fallback.
+    """
+    print("Using synthetic Nifty 50 data (fallback)")
     
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_back)
@@ -23,17 +138,17 @@ def fetch_nifty50_data(days_back: int = 1825) -> pd.DataFrame:
     dates = dates[dates.weekday < 5]  # Remove weekends
     
     # Generate synthetic Nifty 50 data with realistic parameters
-    # Starting value around 18000, annual return ~12%, volatility ~18%
+    # Starting value around 22000 (current realistic range), annual return ~10%, volatility ~20%
     np.random.seed(42)  # For reproducible results
     
     daily_returns = np.random.normal(
-        loc=0.12/252,  # 12% annual return
-        scale=0.18/np.sqrt(252),  # 18% annual volatility
+        loc=0.10/252,  # 10% annual return
+        scale=0.20/np.sqrt(252),  # 20% annual volatility
         size=len(dates)
     )
     
     # Generate price series
-    initial_price = 18000
+    initial_price = 22000
     prices = [initial_price]
     
     for ret in daily_returns[1:]:
@@ -55,6 +170,10 @@ def calculate_benchmark_metrics(fund_df: pd.DataFrame, benchmark_df: pd.DataFram
     # Align dates by using overlapping date range
     fund_df = fund_df.copy()
     benchmark_df = benchmark_df.copy()
+    
+    # Ensure both dataframes have timezone-naive datetime columns for consistent comparison
+    fund_df['date'] = pd.to_datetime(fund_df['date']).dt.tz_localize(None)
+    benchmark_df['date'] = pd.to_datetime(benchmark_df['date']).dt.tz_localize(None)
     
     # Find common date range
     fund_start = fund_df['date'].min()
@@ -206,6 +325,12 @@ def calculate_risk_adjusted_metrics(fund_df: pd.DataFrame, benchmark_df: pd.Data
     """Calculate risk-adjusted performance metrics."""
     if fund_df.empty or benchmark_df.empty:
         return {}
+    
+    # Ensure both dataframes have timezone-naive datetime columns for consistent comparison
+    fund_df = fund_df.copy()
+    benchmark_df = benchmark_df.copy()
+    fund_df['date'] = pd.to_datetime(fund_df['date']).dt.tz_localize(None)
+    benchmark_df['date'] = pd.to_datetime(benchmark_df['date']).dt.tz_localize(None)
     
     # Merge data
     merged = pd.merge(fund_df, benchmark_df, on='date', suffixes=('_fund', '_bench'), how='inner')

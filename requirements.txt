@@ -5,3 +5,5 @@ numpy==1.25.2
 requests==2.31.0
 python-multipart==0.0.6
 pydantic==2.5.0
+nsepython==2.15
+yfinance==0.2.28
