@@ -7,14 +7,14 @@ from app.config.settings import RISK_FREE_RATE, TRADING_DAYS
 
 try:
     from nsepython import nse_get_index_quote
-    import yfinance as yf
+    # import yfinance as yf
     NSE_AVAILABLE = True
 except ImportError:
     NSE_AVAILABLE = False
     print("Warning: nsepython or yfinance not available. Using fallback data.")
 
 
-def fetch_nifty50_data(days_back: int = 1825) -> pd.DataFrame:
+def fetch_nifty50_data(days_back: int = 1825) -> pd.DataFrame: #5 yrs
     """
     Fetch Nifty 50 historical data from real sources.
     First tries Yahoo Finance for historical data, then falls back to NSE current data with extrapolation.
@@ -47,7 +47,7 @@ def fetch_nifty50_data(days_back: int = 1825) -> pd.DataFrame:
             df = df.dropna()
             
             if len(df) > 50:  # Ensure we have sufficient data (reduced threshold)
-                print(f"✅ Fetched {len(df)} days of real Nifty 50 data from Yahoo Finance")
+                print(f" Fetched {len(df)} days of real Nifty 50 data from Yahoo Finance")
                 print(f"   Date range: {df['date'].min().date()} to {df['date'].max().date()}")
                 print(f"   NAV range: {df['nav'].min():.0f} to {df['nav'].max():.0f}")
                 return df
