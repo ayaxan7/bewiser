@@ -12,14 +12,16 @@ from app.utils.helpers import r
 
 
 def analyze_funds_with_benchmark() -> List[Dict[str, Any]]:
-    """Analyze top 5 small cap funds with Nifty 50 benchmark comparison."""
-    top_funds = fetch_all_funds()
+    """Analyze ALL small cap direct growth funds with Nifty 50 benchmark comparison."""
+    all_funds = fetch_all_funds()
     results = []
     
     # Fetch Nifty 50 benchmark data
     nifty_data = fetch_nifty50_data()
+    
+    print(f"🔄 Analyzing {len(all_funds)} small cap funds against Nifty 50 benchmark...")
 
-    for fund in top_funds:
+    for fund in all_funds:
         code = fund["schemeCode"]
         df, name = fetch_nav_history(code)
         if df.empty:
@@ -98,11 +100,13 @@ def analyze_funds_with_benchmark() -> List[Dict[str, Any]]:
 
 
 def analyze_funds() -> List[Dict[str, Any]]:
-    """Analyze top 5 small cap funds and return sorted results."""
-    top_funds = fetch_all_funds()
+    """Analyze ALL small cap direct growth funds and return sorted results."""
+    all_funds = fetch_all_funds()
     results = []
+    
+    print(f"🔄 Analyzing {len(all_funds)} small cap funds...")
 
-    for fund in top_funds:
+    for fund in all_funds:
         code = fund["schemeCode"]
         df, name = fetch_nav_history(code)
         if df.empty:

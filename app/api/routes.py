@@ -14,17 +14,17 @@ def root():
 
 @router.get("/top5smallcap")
 def get_top5_smallcap():
-    """Get top 5 small cap funds with analysis."""
+    """Get all small cap funds with analysis (sorted by performance)."""
     return analyze_funds()
 
 
 @router.get("/top5smallcap-benchmark")
 def get_top5_smallcap_with_benchmark():
-    """Get top 5 small cap funds with Nifty 50 benchmark analysis and recommendations."""
+    """Get all small cap funds with Nifty 50 benchmark analysis and recommendations (sorted by alpha)."""
     return {
         "funds": analyze_funds_with_benchmark(),
         "benchmark": "Nifty 50",
-        "analysis_note": "Funds are analyzed against Nifty 50 benchmark. Alpha shows excess returns, Beta shows volatility relative to market, Information Ratio shows risk-adjusted outperformance.",
+        "analysis_note": "All small cap direct growth funds are analyzed against Nifty 50 benchmark. Alpha shows excess returns, Beta shows volatility relative to market, Information Ratio shows risk-adjusted outperformance.",
         "recommendation_guide": {
             "STRONG BUY": "Excellent performance with low risk - suitable for aggressive investors",
             "BUY": "Good performance with acceptable risk - suitable for moderate to aggressive investors", 

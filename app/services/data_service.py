@@ -4,7 +4,7 @@ from typing import Tuple, List, Dict, Any
 
 
 def fetch_all_funds() -> List[Dict[str, Any]]:
-    """Fetch and filter small cap direct growth funds."""
+    """Fetch and filter ALL small cap direct growth funds."""
     url = "https://api.mfapi.in/mf"
     response = requests.get(url, timeout=30)
     response.raise_for_status()
@@ -18,7 +18,8 @@ def fetch_all_funds() -> List[Dict[str, Any]]:
         and "bonus" not in f["schemeName"].lower()
         and "dividend" not in f["schemeName"].lower()
     ]
-    return filtered[:33]
+    print(f"📊 Found {len(filtered)} small cap direct growth funds")
+    return filtered  # Return ALL funds, not just first 5
 
 
 def fetch_nav_history(scheme_code: str) -> Tuple[pd.DataFrame, str]:
