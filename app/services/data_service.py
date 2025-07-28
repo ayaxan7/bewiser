@@ -18,7 +18,7 @@ def fetch_all_funds() -> List[Dict[str, Any]]:
         and "bonus" not in f["schemeName"].lower()
         and "dividend" not in f["schemeName"].lower()
     ]
-    return filtered[:5]
+    return filtered[:33]
 
 
 def fetch_nav_history(scheme_code: str) -> Tuple[pd.DataFrame, str]:
